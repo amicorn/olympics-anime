@@ -3,44 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Frieren Magic - Camera Fix</title>
+    <title>Unlimited Void: Frieren Edition</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;900&display=swap" rel="stylesheet">
     <style>
         body { margin: 0; padding: 0; overflow: hidden; background-color: #000; font-family: 'Cinzel', serif; }
-        
-        /* Full Screen Camera */
-        #webcam {
-            position: absolute;
-            top: 0; left: 0;
-            width: 100vw; height: 100vh;
-            object-fit: cover;
-            transform: scaleX(-1);
-            z-index: 1;
-            background: #222; /* Fallback to see if element exists */
-        }
-
-        #three-canvas {
-            position: absolute;
-            top: 0; left: 0;
-            width: 100vw; height: 100vh;
-            z-index: 5;
-            pointer-events: none;
-        }
-
-        #ui {
-            position: absolute; top: 5%; width: 100%; text-align: center; color: #fff; 
-            pointer-events: none; z-index: 10; text-shadow: 0 0 10px rgba(0,0,0,0.5);
-        }
-        h1 { font-size: 2.2rem; margin: 0; letter-spacing: 12px; }
-        #technique-name { color: #d4af37; margin-top: 8px; letter-spacing: 4px; }
-
-        #status {
-            position: absolute; bottom: 20px; left: 20px;
-            color: #fff; background: rgba(0,0,0,0.7);
-            padding: 8px 15px; border-radius: 20px; z-index: 20; font-size: 12px;
-        }
+        #webcam { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; object-fit: cover; transform: scaleX(-1); z-index: 1; }
+        #three-canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 5; pointer-events: none; }
+        #ui { position: absolute; top: 5%; width: 100%; text-align: center; color: #fff; pointer-events: none; z-index: 10; text-shadow: 0 0 15px rgba(0,0,0,0.8); }
+        h1 { font-size: 2.2rem; margin: 0; letter-spacing: 12px; font-weight: 900; background: linear-gradient(to bottom, #fdf5e6, #d4af37); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        #technique-name { font-size: 1.1rem; color: #d4af37; margin-top: 8px; font-weight: bold; letter-spacing: 4px; }
+        #status { position: absolute; bottom: 20px; left: 20px; color: #aaa; font-size: 10px; letter-spacing: 2px; z-index: 10; }
     </style>
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
@@ -49,11 +22,10 @@
 
     <video id="webcam" autoplay playsinline></video>
     <div id="three-canvas"></div>
-    <div id="status">Waiting for Camera...</div>
-
+    <div id="status">INITIALIZING MANA...</div>
     <div id="ui">
         <h1>葬送のフリーレン</h1> 
-        <div id="technique-name">SENSING MANA...</div>
+        <div id="technique-name">SENSING...</div>
     </div>
 
 <script>
@@ -61,65 +33,98 @@
     const statusElement = document.getElementById('status');
     const nameEl = document.getElementById('technique-name');
 
-    // --- Three.js Setup ---
-    let scene, camera, renderer, particles;
-    const COUNT = 25000;
+    let scene, camera, renderer, particles, domainSphere;
+    const COUNT = 30000;
     const targetPositions = new Float32Array(COUNT * 3);
     const targetColors = new Float32Array(COUNT * 3);
-    let handPos = { x: 0, y: 0 };
+    const velocities = new Float32Array(COUNT * 3); // For the "shatter" effect
+    
+    let handPos = { x: 0, y: 0, z: 0 };
+    let currentTech = 'neutral';
 
     function initThree() {
         scene = new THREE.Scene();
         camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.z = 80;
+        camera.position.z = 100;
 
         renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(window.devicePixelRatio);
         document.getElementById('three-canvas').appendChild(renderer.domElement);
 
-        const geo = new THREE.BufferGeometry();
+        // 1. Setup the Blue Domain Sphere (from second code)
+        const geometry = new THREE.SphereGeometry(15, 32, 32);
+        const solidMat = new THREE.MeshBasicMaterial({ color: 0x0066ff, transparent: true, opacity: 0.3 });
+        const wireMat = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true, transparent: true, opacity: 0.5 });
+        
+        domainSphere = new THREE.Group();
+        domainSphere.add(new THREE.Mesh(geometry, solidMat));
+        domainSphere.add(new THREE.Mesh(geometry, wireMat));
+        domainSphere.visible = false; // Hidden until triggered
+        scene.add(domainSphere);
+
+        // 2. Setup Particles (from first code)
+        const particleGeo = new THREE.BufferGeometry();
         const positions = new Float32Array(COUNT * 3);
         const colors = new Float32Array(COUNT * 3);
 
         for(let i=0; i<COUNT; i++) {
-            positions[i*3] = (Math.random()-0.5) * 100;
-            positions[i*3+1] = (Math.random()-0.5) * 100;
-            positions[i*3+2] = (Math.random()-0.5) * 100;
-            targetPositions[i*3] = positions[i*3];
-            targetPositions[i*3+1] = positions[i*3+1];
-            targetPositions[i*3+2] = positions[i*3+2];
+            positions[i*3] = (Math.random()-0.5) * 300;
+            positions[i*3+1] = (Math.random()-0.5) * 300;
+            positions[i*3+2] = (Math.random()-0.5) * 300;
+            resetParticleVel(i);
         }
 
-        geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-        geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+        particleGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        particleGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
-        const mat = new THREE.PointsMaterial({
-            size: 0.5,
-            vertexColors: true,
-            blending: THREE.AdditiveBlending,
-            transparent: true,
-            opacity: 0.8
-        });
-
-        particles = new THREE.Points(geo, mat);
+        const particleMat = new THREE.PointsMaterial({ size: 0.6, vertexColors: true, blending: THREE.AdditiveBlending, transparent: true });
+        particles = new THREE.Points(particleGeo, particleMat);
         scene.add(particles);
+
+        updatePattern('neutral');
         animate();
+    }
+
+    function resetParticleVel(i) {
+        velocities[i*3] = (Math.random() - 0.5) * 2;
+        velocities[i*3+1] = (Math.random() - 0.5) * 2;
+        velocities[i*3+2] = (Math.random() - 0.5) * 2;
+    }
+
+    function triggerExplosion() {
+        const posAttr = particles.geometry.attributes.position;
+        for(let i=0; i<COUNT; i++) {
+            const idx = i * 3;
+            // Particles fly away from the sphere's last position
+            velocities[idx] = (posAttr.array[idx] - handPos.x) * (Math.random() * 0.5);
+            velocities[idx+1] = (posAttr.array[idx+1] - handPos.y) * (Math.random() * 0.5);
+            velocities[idx+2] = (posAttr.array[idx+2] - 0) * (Math.random() * 0.5);
+        }
     }
 
     function animate() {
         requestAnimationFrame(animate);
         
-        // Smoothly follow hand
-        particles.position.x += (handPos.x - particles.position.x) * 0.1;
-        particles.position.y += (handPos.y - particles.position.y) * 0.1;
-        particles.rotation.y += 0.005;
+        // Sphere follows hand
+        domainSphere.position.set(handPos.x, handPos.y, 0);
+        domainSphere.rotation.y += 0.01;
+        domainSphere.rotation.x += 0.005;
 
         const posAttr = particles.geometry.attributes.position;
         const colAttr = particles.geometry.attributes.color;
 
         for(let i=0; i<COUNT*3; i++) {
-            posAttr.array[i] += (targetPositions[i] - posAttr.array[i]) * 0.1;
+            if (currentTech === 'gojo') {
+                // Suck into sphere
+                posAttr.array[i] += (targetPositions[i] - posAttr.array[i]) * 0.12;
+            } else {
+                // Apply explosion/floating velocity
+                posAttr.array[i] += velocities[i];
+                velocities[i] *= 0.96; // Friction
+                
+                // Return to target positions slowly
+                posAttr.array[i] += (targetPositions[i] - posAttr.array[i]) * 0.01;
+            }
             colAttr.array[i] += (targetColors[i] - colAttr.array[i]) * 0.1;
         }
         
@@ -128,71 +133,75 @@
         renderer.render(scene, camera);
     }
 
-    // --- Patterns ---
-    function setPattern(type) {
+    function updatePattern(type) {
+        if (currentTech === type) return;
+        
+        if (currentTech === 'gojo' && type !== 'gojo') {
+            triggerExplosion();
+            domainSphere.visible = false;
+        }
+
+        currentTech = type;
+
         for(let i=0; i<COUNT; i++) {
             let x, y, z, r, g, b;
-            if (type === 'heart') {
-                const t = (i / COUNT) * Math.PI * 2;
-                x = 16 * Math.pow(Math.sin(t), 3);
-                y = -(13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t));
-                z = (Math.random()-0.5)*5;
-                r=1; g=0.2; b=0.5;
-            } else if (type === 'fire') {
-                const t = i / COUNT;
-                const angle = t * Math.PI * 20;
-                x = Math.cos(angle) * (5 + t * 30);
-                y = t * -80 + 40;
-                z = Math.sin(angle) * (5 + t * 30);
-                r=1; g=0.4; b=0;
+
+            if (type === 'gojo') {
+                domainSphere.visible = true;
+                // Form a shell around the hand
+                const phi = Math.acos(-1 + (2 * i) / COUNT);
+                const theta = Math.sqrt(COUNT * Math.PI) * phi;
+                const radius = 14 + Math.random() * 2;
+                x = handPos.x + radius * Math.cos(theta) * Math.sin(phi);
+                y = handPos.y + radius * Math.sin(theta) * Math.sin(phi);
+                z = radius * Math.cos(phi);
+                r=0; g=0.5; b=1; 
             } else {
-                x = (Math.random()-0.5)*40; y = (Math.random()-0.5)*40; z = (Math.random()-0.5)*40;
-                r=0.8; g=0.7; b=0.2;
+                // Normal "Mana" flow
+                const angle = (i / COUNT) * Math.PI * 2;
+                const rad = 20 + Math.random() * 10;
+                x = Math.cos(angle) * rad; y = Math.sin(angle) * rad; z = (Math.random()-0.5)*20;
+                r=0.8; g=0.7; b=0.3;
             }
+
             targetPositions[i*3] = x; targetPositions[i*3+1] = y; targetPositions[i*3+2] = z;
             targetColors[i*3] = r; targetColors[i*3+1] = g; targetColors[i*3+2] = b;
         }
+
+        nameEl.innerText = type === 'gojo' ? "領域展開: 無量空処" : "SENSING MANA...";
+        nameEl.style.color = type === 'gojo' ? "#00d4ff" : "#d4af37";
     }
 
-    // --- Hand Tracking ---
     const hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
-    hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.5 });
+    hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.6 });
 
     hands.onResults((results) => {
         if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-            statusElement.textContent = "Mana Detected";
             const h = results.multiHandLandmarks[0];
-            handPos.x = (h[9].x - 0.5) * 100;
-            handPos.y = (0.5 - h[9].y) * 80;
+            handPos.x = (h[9].x - 0.5) * -150; 
+            handPos.y = (0.5 - h[9].y) * 100;
 
-            const isUp = h[8].y < h[6].y;
-            const isPinch = Math.hypot(h[4].x - h[8].x, h[4].y - h[8].y) < 0.05;
-
-            if (isPinch) {
-                setPattern('heart');
-                nameEl.innerText = "BLOOMING KISS";
-            } else if (isUp) {
-                setPattern('fire');
-                nameEl.innerText = "SOLAR FLARE";
+            const distIndexMiddle = Math.hypot(h[8].x - h[12].x, h[8].y - h[12].y);
+            
+            // Trigger: Crossed fingers (tips extremely close)
+            if (distIndexMiddle < 0.025 && h[12].y < h[10].y) {
+                updatePattern('gojo');
             } else {
-                setPattern('neutral');
-                nameEl.innerText = "SENSING...";
+                updatePattern('neutral');
             }
+            statusElement.textContent = "SYSTEM ACTIVE";
         } else {
-            statusElement.textContent = "No Hands in View";
+            updatePattern('neutral');
         }
     });
 
-    // --- Start ---
     const cameraHelper = new Camera(videoElement, {
         onFrame: async () => { await hands.send({image: videoElement}); },
         width: 1280, height: 720
     });
 
     initThree();
-    cameraHelper.start()
-        .then(() => statusElement.textContent = "Camera Active")
-        .catch(e => statusElement.textContent = "Error: " + e);
+    cameraHelper.start();
 
     window.addEventListener('resize', () => {
         camera.aspect = window.innerWidth / window.innerHeight;
