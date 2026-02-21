@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Unlimited Void: Kon Fixed</title>
+    <title>Cursed Energy & Rune Magic</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;900&display=swap" rel="stylesheet">
     <style>
         body { margin: 0; padding: 0; overflow: hidden; background-color: #000; font-family: 'Cinzel', serif; }
@@ -84,6 +84,7 @@
         dogPrism.visible = false;
         scene.add(dogPrism);
 
+        // --- PARTICLE SETUP ---
         const particleGeo = new THREE.BufferGeometry();
         const positions = new Float32Array(COUNT * 3);
         const colors = new Float32Array(COUNT * 3);
@@ -97,8 +98,7 @@
 
         particleGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
         particleGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-
-        const particleMat = new THREE.PointsMaterial({ size: 0.6, vertexColors: true, blending: THREE.AdditiveBlending, transparent: true });
+        const particleMat = new THREE.PointsMaterial({ size: 0.7, vertexColors: true, blending: THREE.AdditiveBlending, transparent: true });
         particles = new THREE.Points(particleGeo, particleMat);
         scene.add(particles);
 
@@ -139,7 +139,6 @@
         for(let i=0; i<COUNT; i++) {
             const idx = i * 3;
             
-            // If Kon is active, particles move toward dynamic orbital targets
             if (currentTech === 'kon') {
                 const angle = (i / COUNT) * Math.PI * 2 + time;
                 const h = (Math.sin(i) * 15);
@@ -147,20 +146,21 @@
                 const tx = handPos.x + Math.cos(angle) * rad;
                 const ty = handPos.y + h;
                 const tz = Math.sin(angle) * rad;
-
                 posAttr.array[idx] += (tx - posAttr.array[idx]) * 0.15;
                 posAttr.array[idx+1] += (ty - posAttr.array[idx+1]) * 0.15;
                 posAttr.array[idx+2] += (tz - posAttr.array[idx+2]) * 0.15;
+            } else if (currentTech === 'rune') {
+                // Keep the "rune" targets relative to handPos every frame
+                posAttr.array[idx] += (handPos.x + targetPositions[idx] - posAttr.array[idx]) * 0.12;
+                posAttr.array[idx+1] += (handPos.y + targetPositions[idx+1] - posAttr.array[idx+1]) * 0.12;
+                posAttr.array[idx+2] += (targetPositions[idx+2] - posAttr.array[idx+2]) * 0.12;
             } else {
-                // Gojo or Neutral logic
                 let lerpFactor = (currentTech === 'gojo') ? 0.12 : 0.01;
                 if (currentTech === 'neutral') {
                     posAttr.array[idx] += velocities[idx];
                     posAttr.array[idx+1] += velocities[idx+1];
                     posAttr.array[idx+2] += velocities[idx+2];
-                    velocities[idx] *= 0.96;
-                    velocities[idx+1] *= 0.96;
-                    velocities[idx+2] *= 0.96;
+                    velocities[idx] *= 0.96; velocities[idx+1] *= 0.96; velocities[idx+2] *= 0.96;
                 }
                 posAttr.array[idx] += (targetPositions[idx] - posAttr.array[idx]) * lerpFactor;
                 posAttr.array[idx+1] += (targetPositions[idx+1] - posAttr.array[idx+1]) * lerpFactor;
@@ -195,8 +195,25 @@
                 targetPositions[idx+2] = radius * Math.cos(phi);
                 targetColors[idx] = 0; targetColors[idx+1] = 0.5; targetColors[idx+2] = 1; 
             } else if (type === 'kon') {
-                // Base colors for Kon (Targets are handled in animate loop for motion)
                 targetColors[idx] = 1.0; targetColors[idx+1] = 0.4; targetColors[idx+2] = 0.0;
+            } else if (type === 'rune') {
+                // Logic from Frieren Code: Top Circle Gold, Pillars Pink
+                if (i < COUNT * 0.4) {
+                    const angle = (i / (COUNT * 0.4)) * Math.PI * 2;
+                    const r = 30;
+                    targetPositions[idx] = Math.cos(angle) * r;
+                    targetPositions[idx+1] = 25;
+                    targetPositions[idx+2] = Math.sin(angle) * r;
+                    targetColors[idx] = 1.0; targetColors[idx+1] = 0.8; targetColors[idx+2] = 0.2; // Gold
+                } else {
+                    const pillarIdx = i % 4;
+                    const offsets = [{x:18, z:18}, {x:-18, z:18}, {x:18, z:-18}, {x:-18, z:-18}];
+                    const h = (Math.random() - 0.5) * 70;
+                    targetPositions[idx] = offsets[pillarIdx].x + (Math.random()-0.5)*4;
+                    targetPositions[idx+1] = -h;
+                    targetPositions[idx+2] = offsets[pillarIdx].z + (Math.random()-0.5)*4;
+                    targetColors[idx] = 1.0; targetColors[idx+1] = 0.1; targetColors[idx+2] = 0.5; // Pink
+                }
             } else {
                 const angle = (i / COUNT) * Math.PI * 2;
                 const rad = 20 + Math.random() * 10;
@@ -207,12 +224,13 @@
             }
         }
         
-        nameEl.innerText = type === 'gojo' ? "領域展開: 無量空処" : (type === 'kon' ? "コン (KON)" : "SENSING MANA...");
-        nameEl.style.color = type === 'gojo' ? "#00d4ff" : (type === 'kon' ? "#ff6600" : "#d4af37");
+        const names = { gojo: "領域展開: 無量空処", kon: "コン (KON)", rune: "ELDRITCH RUNE GATE", neutral: "SENSING MANA..." };
+        const colors = { gojo: "#00d4ff", kon: "#ff6600", rune: "#ff0077", neutral: "#d4af37" };
+        nameEl.innerText = names[type];
+        nameEl.style.color = colors[type];
     }
 
-    function drawSkeleton(landmarks) {
-        canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+    function drawSkeleton(landmarks, colorSet) {
         FINGER_MAP.forEach(finger => {
             canvasCtx.beginPath();
             canvasCtx.strokeStyle = finger.color;
@@ -224,7 +242,6 @@
                 canvasCtx.lineTo(end.x * canvasElement.width, end.y * canvasElement.height);
             }
             canvasCtx.stroke();
-
             finger.ids.forEach(id => {
                 const lm = landmarks[id];
                 const x = lm.x * canvasElement.width;
@@ -233,40 +250,49 @@
                 canvasCtx.beginPath();
                 canvasCtx.arc(x, y, 3, 0, Math.PI * 2);
                 canvasCtx.fill();
-                
                 if(id === 4 || id === 8 || id === 12 || id === 16 || id === 20 || id === 0) {
                     canvasCtx.fillStyle = finger.color;
                     canvasCtx.font = "10px Arial";
-                    const label = id === 0 ? "WRIST" : "TIP";
-                    canvasCtx.fillText(label, x + 5, y);
+                    canvasCtx.fillText(id === 0 ? "WRIST" : "TIP", x + 5, y);
                 }
             });
         });
     }
 
     const hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
-    hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.6 });
+    hands.setOptions({ maxNumHands: 2, modelComplexity: 1, minDetectionConfidence: 0.6 });
 
     hands.onResults((results) => {
+        canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
         if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-            const h = results.multiHandLandmarks[0];
-            drawSkeleton(h);
-            handPos.x = (h[9].x - 0.5) * -150; 
-            handPos.y = (0.5 - h[9].y) * 100;
-
-            const distIndexMiddle = Math.hypot(h[8].x - h[12].x, h[8].y - h[12].y);
-            const d1 = Math.hypot(h[12].x - h[4].x, h[12].y - h[4].y);
-            const d2 = Math.hypot(h[16].x - h[4].x, h[16].y - h[4].y);
-            const indexUp = h[8].y < h[6].y;
-            const pinkyUp = h[20].y < h[18].y;
-
-            if (distIndexMiddle < 0.025 && h[12].y < h[10].y) updatePattern('gojo');
-            else if (d1 < 0.06 && d2 < 0.06 && indexUp && pinkyUp) updatePattern('kon');
-            else updatePattern('neutral');
+            let detected = 'neutral';
             
+            // Average center for two hands or single hand position
+            let centerX = 0, centerY = 0;
+            results.multiHandLandmarks.forEach(h => {
+                centerX += h[9].x; centerY += h[9].y;
+                drawSkeleton(h);
+            });
+            handPos.x = (centerX / results.multiHandLandmarks.length - 0.5) * -150;
+            handPos.y = (0.5 - centerY / results.multiHandLandmarks.length) * 100;
+
+            if (results.multiHandLandmarks.length === 2) {
+                const h1 = results.multiHandLandmarks[0];
+                const h2 = results.multiHandLandmarks[1];
+                const dist = Math.hypot(h1[9].x - h2[9].x, h1[9].y - h2[9].y);
+                // Rune Gate: Two hands near each other
+                if (dist < 0.25) detected = 'rune';
+            } else {
+                const h = results.multiHandLandmarks[0];
+                const distIndexMiddle = Math.hypot(h[8].x - h[12].x, h[8].y - h[12].y);
+                const d1 = Math.hypot(h[12].x - h[4].x, h[12].y - h[4].y);
+                const d2 = Math.hypot(h[16].x - h[4].x, h[16].y - h[4].y);
+                if (distIndexMiddle < 0.025 && h[12].y < h[10].y) detected = 'gojo';
+                else if (d1 < 0.06 && d2 < 0.06 && h[8].y < h[6].y && h[20].y < h[18].y) detected = 'kon';
+            }
+            updatePattern(detected);
             statusElement.textContent = "SYSTEM ACTIVE";
         } else {
-            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
             updatePattern('neutral');
         }
     });
