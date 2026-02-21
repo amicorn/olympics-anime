@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hand Tracking Fix - Three.js</title>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
+        .container { position: relative; width: 100vw; height: 100vh; }
+        
+        #webcam {
+            position: absolute;
+            width: 100%; height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+            z-index: 1;
+        }
+        
+        #canvas { /* MediaPipe Drawing */
+            position: absolute;
+            width: 100%; height: 100%;
+            transform: scaleX(-1);
+            z-index: 2;
+            pointer-events: none;
+        }
+        
+        #three-canvas {
+            position: absolute;
+            width: 100%; height: 100%;
+            z-index: 3;
+            pointer-events: none;
+        }
+        
+        #status {
+            position: absolute;
+            top: 20px; left: 20px;
+            color: #fff; background: rgba(0,0,0,0.6);
+            padding: 10px; border-radius: 8px;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <video id="webcam" autoplay playsinline></video>
+        <canvas id="canvas"></canvas>
+        <div id="three-canvas"></div>
+        <div id="status">Starting System...</div>
+    </div>
+
+    <script>
+        const videoElement = document.getElementById('webcam');
+        const canvasElement = document.getElementById('canvas');
+        const canvasCtx = canvasElement.getContext('2d');
+        const statusElement = document.getElementById('status');
+        const threeContainer = document.getElementById('three-canvas');
+
+        let scene, camera, renderer, sphere, solidMesh;
+        let lastColorChangeTime = 0;
+        let currentSphereSize = 1.0;
+
+        function initThreeJS() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 5;
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            threeContainer.appendChild(renderer.domElement);
+
+            const geometry = new THREE.SphereGeometry(1, 32, 32);
+            const solidMaterial = new THREE.MeshBasicMaterial({ 
+                color: 0x00ffff, transparent: true, opacity: 0.6 
+            });
+            const wireframeMaterial = new THREE.MeshBasicMaterial({ 
+                color: 0xffffff, wireframe: true 
+            });
+
+            sphere = new THREE.Group();
+            solidMesh = new THREE.Mesh(geometry, solidMaterial);
+            sphere.add(solidMesh);
+            sphere.add(new THREE.Mesh(geometry, wireframeMaterial));
+            
+            scene.add(sphere);
+            animate();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            if (sphere) {
+                sphere.rotation.y += 0.01;
+                sphere.rotation.x += 0.005;
+            }
+            renderer.render(scene, camera);
+        }
+
+        function onResults(results) {
+            canvasCtx.save();
+            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+            
+            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                statusElement.textContent = "Tracking Active";
+                
+                for (let i = 0; i < results.multiHandLandmarks.length; i++) {
+                    const landmarks = results.multiHandLandmarks[i];
+                    drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, {color: '#00FF00', lineWidth: 5});
+                    drawLandmarks(canvasCtx, landmarks, {color: '#FF0000', lineWidth: 2});
+
+                    // Logic for Right Hand (Pinch to Scale)
+                    const isRightHand = results.multiHandedness[i].label === 'Right';
+                    if (isRightHand) {
+                        const thumb = landmarks[4];
+                        const index = landmarks[8];
+                        const dist = Math.hypot(thumb.x - index.x, thumb.y - index.y);
+                        let scale = THREE.MathUtils.mapLinear(dist, 0.05, 0.3, 0.5, 3);
+                        sphere.scale.lerp(new THREE.Vector3(scale, scale, scale), 0.2);
+                    }
+                }
+            } else {
+                statusElement.textContent = "No Hands Detected";
+            }
+            canvasCtx.restore();
+        }
+
+        async function startApp() {
+            initThreeJS();
+
+            const hands = new Hands({
+                locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+            });
+
+            hands.setOptions({
+                maxNumHands: 2,
+                modelComplexity: 1,
+                minDetectionConfidence: 0.5,
+                minTrackingConfidence: 0.5
+            });
+
+            hands.onResults(onResults);
+
+            // Renamed to cameraHelper to avoid conflict with Three.js camera
+            const cameraHelper = new Camera(videoElement, {
+                onFrame: async () => {
+                    await hands.send({image: videoElement});
+                },
+                width: 1280,
+                height: 720
+            });
+
+            cameraHelper.start()
+                .then(() => {
+                    statusElement.textContent = "Camera Started";
+                    canvasElement.width = window.innerWidth;
+                    canvasElement.height = window.innerHeight;
+                })
+                .catch(err => {
+                    statusElement.textContent = "Camera Error: " + err;
+                });
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            canvasElement.width = window.innerWidth;
+            canvasElement.height = window.innerHeight;
+        });
+
+        startApp();
+    </script>
+</body>
+</html>
