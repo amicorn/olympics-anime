@@ -3,11 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Unlimited Void: Frieren Edition</title>
+    <title>Unlimited Void: Debug Edition</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;900&display=swap" rel="stylesheet">
     <style>
         body { margin: 0; padding: 0; overflow: hidden; background-color: #000; font-family: 'Cinzel', serif; }
         #webcam { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; object-fit: cover; transform: scaleX(-1); z-index: 1; }
+        /* 2D Canvas for Skeleton */
+        #skeleton-canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 3; transform: scaleX(-1); pointer-events: none; }
+        /* 3D Canvas for Particles */
         #three-canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 5; pointer-events: none; }
         #ui { position: absolute; top: 5%; width: 100%; text-align: center; color: #fff; pointer-events: none; z-index: 10; text-shadow: 0 0 15px rgba(0,0,0,0.8); }
         h1 { font-size: 2.2rem; margin: 0; letter-spacing: 12px; font-weight: 900; background: linear-gradient(to bottom, #fdf5e6, #d4af37); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
@@ -21,8 +24,9 @@
 <body>
 
     <video id="webcam" autoplay playsinline></video>
+    <canvas id="skeleton-canvas"></canvas>
     <div id="three-canvas"></div>
-    <div id="status">INITIALIZING MANA...</div>
+    <div id="status">INITIALIZING...</div>
     <div id="ui">
         <h1>葬送のフリーレン</h1> 
         <div id="technique-name">SENSING...</div>
@@ -30,6 +34,8 @@
 
 <script>
     const videoElement = document.getElementById('webcam');
+    const canvasElement = document.getElementById('skeleton-canvas');
+    const canvasCtx = canvasElement.getContext('2d');
     const statusElement = document.getElementById('status');
     const nameEl = document.getElementById('technique-name');
 
@@ -37,10 +43,19 @@
     const COUNT = 30000;
     const targetPositions = new Float32Array(COUNT * 3);
     const targetColors = new Float32Array(COUNT * 3);
-    const velocities = new Float32Array(COUNT * 3); // For the "shatter" effect
+    const velocities = new Float32Array(COUNT * 3);
     
     let handPos = { x: 0, y: 0, z: 0 };
     let currentTech = 'neutral';
+
+    // Finger Configuration
+    const FINGER_MAP = [
+        { name: 'THUMB', ids: [0, 1, 2, 3, 4], color: '#00FF00' },
+        { name: 'INDEX', ids: [0, 5, 6, 7, 8], color: '#00FFFF' },
+        { name: 'MIDDLE', ids: [0, 9, 10, 11, 12], color: '#FF00FF' },
+        { name: 'RING', ids: [0, 13, 14, 15, 16], color: '#FFFF00' },
+        { name: 'PINKY', ids: [0, 17, 18, 19, 20], color: '#FF0000' }
+    ];
 
     function initThree() {
         scene = new THREE.Scene();
@@ -51,18 +66,17 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.getElementById('three-canvas').appendChild(renderer.domElement);
 
-        // 1. Setup the Blue Domain Sphere (from second code)
+        // --- RESTORED GOJO SPHERE ---
         const geometry = new THREE.SphereGeometry(15, 32, 32);
         const solidMat = new THREE.MeshBasicMaterial({ color: 0x0066ff, transparent: true, opacity: 0.3 });
         const wireMat = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true, transparent: true, opacity: 0.5 });
-        
         domainSphere = new THREE.Group();
         domainSphere.add(new THREE.Mesh(geometry, solidMat));
         domainSphere.add(new THREE.Mesh(geometry, wireMat));
-        domainSphere.visible = false; // Hidden until triggered
+        domainSphere.visible = false;
         scene.add(domainSphere);
 
-        // 2. Setup Particles (from first code)
+        // --- RESTORED PARTICLE SETUP ---
         const particleGeo = new THREE.BufferGeometry();
         const positions = new Float32Array(COUNT * 3);
         const colors = new Float32Array(COUNT * 3);
@@ -95,7 +109,6 @@
         const posAttr = particles.geometry.attributes.position;
         for(let i=0; i<COUNT; i++) {
             const idx = i * 3;
-            // Particles fly away from the sphere's last position
             velocities[idx] = (posAttr.array[idx] - handPos.x) * (Math.random() * 0.5);
             velocities[idx+1] = (posAttr.array[idx+1] - handPos.y) * (Math.random() * 0.5);
             velocities[idx+2] = (posAttr.array[idx+2] - 0) * (Math.random() * 0.5);
@@ -104,8 +117,6 @@
 
     function animate() {
         requestAnimationFrame(animate);
-        
-        // Sphere follows hand
         domainSphere.position.set(handPos.x, handPos.y, 0);
         domainSphere.rotation.y += 0.01;
         domainSphere.rotation.x += 0.005;
@@ -115,19 +126,14 @@
 
         for(let i=0; i<COUNT*3; i++) {
             if (currentTech === 'gojo') {
-                // Suck into sphere
                 posAttr.array[i] += (targetPositions[i] - posAttr.array[i]) * 0.12;
             } else {
-                // Apply explosion/floating velocity
                 posAttr.array[i] += velocities[i];
-                velocities[i] *= 0.96; // Friction
-                
-                // Return to target positions slowly
+                velocities[i] *= 0.96;
                 posAttr.array[i] += (targetPositions[i] - posAttr.array[i]) * 0.01;
             }
             colAttr.array[i] += (targetColors[i] - colAttr.array[i]) * 0.1;
         }
-        
         posAttr.needsUpdate = true;
         colAttr.needsUpdate = true;
         renderer.render(scene, camera);
@@ -135,20 +141,16 @@
 
     function updatePattern(type) {
         if (currentTech === type) return;
-        
         if (currentTech === 'gojo' && type !== 'gojo') {
             triggerExplosion();
             domainSphere.visible = false;
         }
-
         currentTech = type;
 
         for(let i=0; i<COUNT; i++) {
             let x, y, z, r, g, b;
-
             if (type === 'gojo') {
                 domainSphere.visible = true;
-                // Form a shell around the hand
                 const phi = Math.acos(-1 + (2 * i) / COUNT);
                 const theta = Math.sqrt(COUNT * Math.PI) * phi;
                 const radius = 14 + Math.random() * 2;
@@ -157,19 +159,51 @@
                 z = radius * Math.cos(phi);
                 r=0; g=0.5; b=1; 
             } else {
-                // Normal "Mana" flow
                 const angle = (i / COUNT) * Math.PI * 2;
                 const rad = 20 + Math.random() * 10;
                 x = Math.cos(angle) * rad; y = Math.sin(angle) * rad; z = (Math.random()-0.5)*20;
                 r=0.8; g=0.7; b=0.3;
             }
-
             targetPositions[i*3] = x; targetPositions[i*3+1] = y; targetPositions[i*3+2] = z;
             targetColors[i*3] = r; targetColors[i*3+1] = g; targetColors[i*3+2] = b;
         }
-
         nameEl.innerText = type === 'gojo' ? "領域展開: 無量空処" : "SENSING MANA...";
         nameEl.style.color = type === 'gojo' ? "#00d4ff" : "#d4af37";
+    }
+
+    // --- SKELETON DRAWING ---
+    function drawSkeleton(landmarks) {
+        canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+        FINGER_MAP.forEach(finger => {
+            canvasCtx.beginPath();
+            canvasCtx.strokeStyle = finger.color;
+            canvasCtx.lineWidth = 3;
+            for (let i = 0; i < finger.ids.length - 1; i++) {
+                const start = landmarks[finger.ids[i]];
+                const end = landmarks[finger.ids[i+1]];
+                canvasCtx.moveTo(start.x * canvasElement.width, start.y * canvasElement.height);
+                canvasCtx.lineTo(end.x * canvasElement.width, end.y * canvasElement.height);
+            }
+            canvasCtx.stroke();
+
+            finger.ids.forEach(id => {
+                const lm = landmarks[id];
+                const x = lm.x * canvasElement.width;
+                const y = lm.y * canvasElement.height;
+                canvasCtx.fillStyle = "white";
+                canvasCtx.beginPath();
+                canvasCtx.arc(x, y, 3, 0, Math.PI * 2);
+                canvasCtx.fill();
+                
+                // Labels for Tips and Wrist
+                if(id === 4 || id === 8 || id === 12 || id === 16 || id === 20 || id === 0) {
+                    canvasCtx.fillStyle = finger.color;
+                    canvasCtx.font = "10px Arial";
+                    const label = id === 0 ? "WRIST" : "TIP";
+                    canvasCtx.fillText(label, x + 5, y);
+                }
+            });
+        });
     }
 
     const hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
@@ -178,25 +212,25 @@
     hands.onResults((results) => {
         if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
             const h = results.multiHandLandmarks[0];
+            drawSkeleton(h);
             handPos.x = (h[9].x - 0.5) * -150; 
             handPos.y = (0.5 - h[9].y) * 100;
-
             const distIndexMiddle = Math.hypot(h[8].x - h[12].x, h[8].y - h[12].y);
-            
-            // Trigger: Crossed fingers (tips extremely close)
-            if (distIndexMiddle < 0.025 && h[12].y < h[10].y) {
-                updatePattern('gojo');
-            } else {
-                updatePattern('neutral');
-            }
+            if (distIndexMiddle < 0.025 && h[12].y < h[10].y) updatePattern('gojo');
+            else updatePattern('neutral');
             statusElement.textContent = "SYSTEM ACTIVE";
         } else {
+            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
             updatePattern('neutral');
         }
     });
 
     const cameraHelper = new Camera(videoElement, {
-        onFrame: async () => { await hands.send({image: videoElement}); },
+        onFrame: async () => { 
+            canvasElement.width = videoElement.videoWidth;
+            canvasElement.height = videoElement.videoHeight;
+            await hands.send({image: videoElement}); 
+        },
         width: 1280, height: 720
     });
 
