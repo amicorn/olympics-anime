@@ -44,6 +44,8 @@
     const velocities = new Float32Array(COUNT * 3);
     
     let handPos = { x: 0, y: 0, z: 0 };
+    let lastZ = 0;
+    let heartBeatScale = 1.0;
     let currentTech = 'neutral';
     let time = 0;
 
@@ -64,7 +66,6 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.getElementById('three-canvas').appendChild(renderer.domElement);
 
-        // --- GOJO SPHERE ---
         const geometry = new THREE.SphereGeometry(15, 32, 32);
         const solidMat = new THREE.MeshBasicMaterial({ color: 0x0066ff, transparent: true, opacity: 0.3 });
         const wireMat = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true, transparent: true, opacity: 0.5 });
@@ -74,7 +75,6 @@
         domainSphere.visible = false;
         scene.add(domainSphere);
 
-        // --- KON PRISM ---
         const prismGeo = new THREE.CylinderGeometry(12, 12, 20, 3);
         const prismMat = new THREE.MeshBasicMaterial({ color: 0xFF6600, transparent: true, opacity: 0.5 });
         const prismWire = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true });
@@ -84,7 +84,6 @@
         dogPrism.visible = false;
         scene.add(dogPrism);
 
-        // --- PARTICLE SETUP ---
         const particleGeo = new THREE.BufferGeometry();
         const positions = new Float32Array(COUNT * 3);
         const colors = new Float32Array(COUNT * 3);
@@ -136,6 +135,9 @@
         const posAttr = particles.geometry.attributes.position;
         const colAttr = particles.geometry.attributes.color;
 
+        // Smoothly return heartbeat to normal size
+        heartBeatScale += (1.0 - heartBeatScale) * 0.1;
+
         for(let i=0; i<COUNT; i++) {
             const idx = i * 3;
             
@@ -150,8 +152,10 @@
                 posAttr.array[idx+1] += (ty - posAttr.array[idx+1]) * 0.15;
                 posAttr.array[idx+2] += (tz - posAttr.array[idx+2]) * 0.15;
             } else if (currentTech === 'rune' || currentTech === 'fangirl') {
-                posAttr.array[idx] += (handPos.x + targetPositions[idx] - posAttr.array[idx]) * 0.12;
-                posAttr.array[idx+1] += (handPos.y + targetPositions[idx+1] - posAttr.array[idx+1]) * 0.12;
+                // Apply heartBeatScale ONLY to the fangirl effect positions relative to center
+                const s = currentTech === 'fangirl' ? heartBeatScale : 1.0;
+                posAttr.array[idx] += (handPos.x + (targetPositions[idx] * s) - posAttr.array[idx]) * 0.12;
+                posAttr.array[idx+1] += (handPos.y + (targetPositions[idx+1] * s) - posAttr.array[idx+1]) * 0.12;
                 posAttr.array[idx+2] += (targetPositions[idx+2] - posAttr.array[idx+2]) * 0.12;
             } else {
                 let lerpFactor = (currentTech === 'gojo') ? 0.12 : 0.01;
@@ -219,7 +223,7 @@
                 targetPositions[idx] = x * 1.8;
                 targetPositions[idx+1] = y * 1.8;
                 targetPositions[idx+2] = (Math.random() - 0.5) * 10;
-                targetColors[idx] = 1.0; targetColors[idx+1] = 0.1; targetColors[idx+2] = 0.3; // Pink-Red
+                targetColors[idx] = 1.0; targetColors[idx+1] = 0.1; targetColors[idx+2] = 0.3;
             } else {
                 const angle = (i / COUNT) * Math.PI * 2;
                 const rad = 20 + Math.random() * 10;
@@ -278,24 +282,29 @@
         canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
         if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
             let detected = 'neutral';
-            let centerX = 0, centerY = 0;
+            let centerX = 0, centerY = 0, centerZ = 0;
             results.multiHandLandmarks.forEach(h => {
-                centerX += h[9].x; centerY += h[9].y;
+                centerX += h[9].x; centerY += h[9].y; centerZ += h[9].z;
                 drawSkeleton(h);
             });
+            
+            const avgZ = centerZ / results.multiHandLandmarks.length;
             handPos.x = (centerX / results.multiHandLandmarks.length - 0.5) * -150;
             handPos.y = (0.5 - centerY / results.multiHandLandmarks.length) * 100;
 
             if (results.multiHandLandmarks.length === 2) {
                 const h1 = results.multiHandLandmarks[0];
                 const h2 = results.multiHandLandmarks[1];
-                
-                // Detection for Fangirl Heart: Thumbs (4) touching and Index (8) touching
                 const thumbDist = Math.hypot(h1[4].x - h2[4].x, h1[4].y - h2[4].y);
                 const indexDist = Math.hypot(h1[8].x - h2[8].x, h1[8].y - h2[8].y);
                 
                 if (thumbDist < 0.1 && indexDist < 0.1) {
                     detected = 'fangirl';
+                    // Calculate "shake" velocity based on Z-depth change
+                    let zVelocity = Math.abs(avgZ - lastZ);
+                    if (zVelocity > 0.005) {
+                        heartBeatScale = 1.0 + (zVelocity * 40); // Pulse effect
+                    }
                 } else if (Math.hypot(h1[9].x - h2[9].x, h1[9].y - h2[9].y) < 0.25) {
                     detected = 'rune';
                 }
@@ -307,6 +316,8 @@
                 if (distIndexMiddle < 0.025 && h[12].y < h[10].y) detected = 'gojo';
                 else if (d1 < 0.06 && d2 < 0.06 && h[8].y < h[6].y && h[20].y < h[18].y) detected = 'kon';
             }
+            
+            lastZ = avgZ;
             updatePattern(detected);
             statusElement.textContent = "SYSTEM ACTIVE";
         } else {
