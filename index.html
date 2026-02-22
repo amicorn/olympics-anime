@@ -10,9 +10,9 @@
         #webcam { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; object-fit: cover; transform: scaleX(-1); z-index: 1; }
         #skeleton-canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 3; transform: scaleX(-1); pointer-events: none; }
         #three-canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 5; pointer-events: none; }
-        #ui { position: absolute; top: 5%; width: 100%; text-align: center; color: #fff; pointer-events: none; z-index: 10; text-shadow: 0 0 15px rgba(0,0,0,0.8); }
-        h1 { font-size: 1.5rem; margin: 0; letter-spacing: 12px; font-weight: 900; background: linear-gradient(to bottom, #fdf5e6, #d4af37); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        #technique-name { font-size: 2.0rem; color: #d4af37; margin-top: 8px; font-weight: bold; letter-spacing: 4px; }
+        #ui { position: absolute; top: 5%; width: 100%; text-align: center; color: #fff; pointer-events: none; z-index: 10; text-shadow: 20px 20px 55px rgba(0,0,0,0.8); }
+        h1 { font-size: 1.5rem; margin: 0; letter-spacing: 12px; font-weight: 900; background: linear-gradient(to bottom, #fafafa, #ffffff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        #technique-name { font-size: 2.0rem; color: #ffd900; margin-top: 8px; font-weight: bold; letter-spacing: 4px; }
         #status { position: absolute; bottom: 20px; left: 20px; color: #aaa; font-size: 10px; letter-spacing: 2px; z-index: 10; }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -231,11 +231,11 @@
         }
         
         const names = { 
-            gojo: "GOJO'S DOMAIN EXPANSION: INFINITE VOID", 
-            kon: "コン (KON)", 
-            rune: "MADOKA MAGICA MAGICAL GIRL TRANSFORMATION", 
-            fangirl: "FANGIRL MODE: PINK HEART CRUSH",
-            neutral: "SENSING MANA..." 
+            gojo: "五条悟 GOJO INFINITE VOID", 
+            kon: "コン (KON) CHAINSAW MAN", 
+            rune: "魔法少女まどか☆マギカ MADOKA MAGICA", 
+            fangirl: "ドキドキ DOKI DOKI FANGIRL",
+            neutral: "GATHERING MANA..." 
         };
         const colors = { gojo: "#00d4ff", kon: "#ff6600", rune: "#ff0077", fangirl: "#ff3366", neutral: "#d4af37" };
         nameEl.innerText = names[type];
