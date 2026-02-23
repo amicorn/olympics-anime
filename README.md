@@ -1,6 +1,8 @@
 # olympics-anime
 2/21/26
 
+- by amicornz@ 2026
+
 Inspired by Alysa Liu's interview about her top 5 favourite anime.
 
 I built particle and geometric visualizations with gesture-based motion control for the following anime:
