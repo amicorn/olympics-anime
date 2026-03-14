@@ -9,6 +9,10 @@ This project features complex particle and geometric visualizations with gesture
 
 Inspired by Alysa Liu's interview about her top 5 favorite anime.
 
+**Website: https://amicorn.github.io/olympics-anime/**
+
+Link to full demo video: https://www.instagram.com/reel/DVHdSqrEvpS/
+
 ## 🎬 Demo
 
 A computer vision-powered visualization for Gojo's **Infinite Void** spell from *Jujutsu Kaisen*.
