@@ -9,6 +9,10 @@ Inspired by Alysa Liu's interview about her top 5 favourite anime.
 
 https://github.com/user-attachments/assets/be6f739f-2c15-40f6-bc8a-4ded08156fff
 
+## Screenshot
+
+<img src="./screenshots/computer_vision_gojo_me_ss.png" alt="infinite void blue sphere" width="400">
+
 
 ## Magic spells list
 I built particle and geometric visualizations with gesture-based motion control for the following anime:
