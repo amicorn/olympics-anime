@@ -1,0 +1,79 @@
+body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: #000;
+    font-family: 'Cinzel', serif;
+}
+
+#webcam {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    object-fit: cover;
+    transform: scaleX(-1);
+    z-index: 1;
+}
+
+#skeleton-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 3;
+    transform: scaleX(-1);
+    pointer-events: none;
+}
+
+#three-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 5;
+    pointer-events: none;
+}
+
+#ui {
+    position: absolute;
+    top: 5%;
+    width: 100%;
+    text-align: center;
+    color: #fff;
+    pointer-events: none;
+    z-index: 10;
+    text-shadow: 20px 20px 55px rgba(0, 0, 0, 0.8);
+}
+
+h1 {
+    font-size: 1.5rem;
+    margin: 0;
+    letter-spacing: 12px;
+    font-weight: 900;
+    background: linear-gradient(to bottom, #fafafa, #ffffff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+#technique-name {
+    font-size: 2.0rem;
+    color: #ffd900;
+    margin-top: 8px;
+    font-weight: bold;
+    letter-spacing: 4px;
+    transition: color 0.3s ease;
+}
+
+#status {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    color: #aaa;
+    font-size: 10px;
+    letter-spacing: 2px;
+    z-index: 10;
+}
