@@ -1,5 +1,5 @@
 
-# Olympics Anime: Bring Anime to Life with Gesture-Based Magic Visualizations
+# Bring Anime to Life with Gesture-Based Magic Visualizations: Jujutsu Kaisen, Chainsaw Man, Madoka Magica
 
 2/21/26
 
