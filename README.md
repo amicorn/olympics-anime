@@ -9,7 +9,7 @@ This project features complex particle and geometric visualizations with gesture
 
 Inspired by Alysa Liu's interview about her top 5 favorite anime.
 
-**Website: https://amicorn.github.io/olympics-anime/**
+**Website: https://amicorn.github.io/anime-magic/**
 
 Full demos:
 - [Computer vision demo of JJK, Chainsaw Man, and Madoka Magica spells](https://www.instagram.com/reel/DVHdSqrEvpS/)
@@ -21,11 +21,52 @@ A computer vision-powered visualization for Gojo's **Infinite Void** spell from 
 
 [Watch the Demo](https://github.com/user-attachments/assets/be6f739f-2c15-40f6-bc8a-4ded08156fff)
 
-## 📸 Screenshot
 
-<p align="left">
-  <img src="./screenshots/computer_vision_gojo_me_ss.png" alt="Infinite Void Blue Sphere" width="600">
-</p>
+## 🏆 Featured Visualizations
+
+| **Jujutsu Kaisen** <br><sub>Gojo's Infinite Void)</sub> | **Madoka Magica** <br><sub>Rune Gate / Magical Girl Transformation</sub> | **Chainsaw Man** <br><sub>Aki's Kon (Fox Devil) Beast Summoning </sub> |
+| :---: | :---: | :---: |
+| <img src="./screenshots/computer_vision_gojo_me_ss.png" alt="Gojo's Infinite Void" width="600"> | <img src="./screenshots/madoka magica demo cover.jpeg" alt="Madoka Magica Transformation" width="520"> | <img src="./screenshots/chainsaw man finger gesture.jpeg" alt="Aki's Kon Summoning" width="520"> |
+
+## 📸 Visualization Gallery (Technical Overview)
+
+This project maps real-time MediaPipe hand landmarks to Three.js coordinate systems. Below is the full visual mapping of the system states.
+
+### 🧿 Jujutsu Kaisen: Infinite Void
+| | | | |
+| :---: | :---: | :---: | :---: |
+| <img src="screenshots/cross fingers like gojo.jpeg" width="160"> | <img src="screenshots/jujutsu kaisen infinity void sphere.jpeg" width="160"> | <img src="screenshots/jujutsu kaisen sphere burst.jpeg" width="160"> | <img src="screenshots/jujutsu kaisen release spell peace.jpeg" width="160"> |
+| **Trigger Gesture** | **Sphere Creation** | **Burst Logic** | **State Release** |
+
+---
+
+### 🦊 Chainsaw Man: Aki's Kon
+| | | | |
+| :---: | :---: | :---: | :---: |
+| <img src="screenshots/chainsaw man finger gesture.jpeg" width="160"> | <img src="screenshots/chainsaw man finger gesture 2.jpeg" width="160"> | <img src="screenshots/chainsaw man hand close.jpeg" width="160"> | <img src="screenshots/chainsaw man smaller orange geometry.jpeg" width="160"> |
+| <img src="screenshots/chainsaw man hand only.jpeg" width="160"> | <img src="screenshots/chainsaw man start spell.jpeg" width="160"> | <img src="screenshots/gathering mana base state.jpeg" width="160"> | <img src="screenshots/computer_vision_gojo_me_ss.png" width="160"> |
+| **Hand Pose (A)** | **Hand Pose (B)** | **Trigger State** | **Effect Render** |
+
+---
+
+### 🌸 Madoka Magica: Rune Gate & Magical Girl Transformation
+| | | | |
+| :---: | :---: | :---: | :---: |
+| <img src="screenshots/madoka magica cross hands inital.jpeg" width="160"> | <img src="screenshots/madoka magica cross hands.jpeg" width="160"> | <img src="screenshots/madoka magica cross hands 2.jpeg" width="160"> | <img src="screenshots/madoka magica demo cover.jpeg" width="160"> |
+| <img src="screenshots/madoka magica start spell.jpeg" width="160"> | <img src="screenshots/madoka magica spell middle.jpeg" width="160"> | <img src="screenshots/madoka magica pillars and sphere.jpeg" width="160"> | <img src="screenshots/madoka magica pillars with finger tracking.jpeg" width="160"> |
+| <img src="screenshots/madoka magica release state.jpeg" width="160"> | <img src="screenshots/madoka magica release spell'.jpeg" width="160"> | <img src="screenshots/computer vision program for alysa liu.jpeg" width="160"> | |
+| **Initial Pose** | **Gate Trigger** | **Pillar Physics** | **Release Phase** |
+
+---
+
+### ❤️ Doki Doki Hearts & System UI
+| | | | |
+| :---: | :---: | :---: | :---: |
+| <img src="screenshots/forming particle heart.jpeg" width="160"> | <img src="screenshots/geometric purple heart.jpeg" width="160"> | <img src="screenshots/geometric purple heart 2.jpeg" width="160"> | <img src="screenshots/geometric purple heart with sphere.jpeg" width="160"> |
+| <img src="screenshots/math hearts for alysa.png" width="160"> |<img src="screenshots/gathering mana base state.png" width="160"> | | |
+| **Heart Gesture** | **Particle Heart** | **Depth Mapping** | **Targeting** |
+
+
 
 ## ✨ Magic Spells List
 
