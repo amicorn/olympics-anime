@@ -94,7 +94,7 @@ I built particle and geometric visualizations with gesture-based motion control 
 I used the following web technologies to create this real-time interactive program:
 
 - **Frontend**: HTML5, CSS3, JavaScript (ES6+)
-- **Computer Vision**: [MediaPipe Hands](https://google.github.io/mediapipe/solutions/hands.html) for high-fidelity hand and finger tracking.
+- **Computer Vision**: [MediaPipe](https://github.com/google-ai-edge/mediapipe) for high-fidelity hand and finger tracking.
 - **3D Graphics**: [Three.js](https://threejs.org/) for rendering complex particle systems and geometric shapes.
 - **Mathematics**: Custom algorithms for gesture recognition, particle physics, and coordinate mapping from 2D camera space to 3D world space.
 
